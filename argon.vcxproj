@@ -19,10 +19,18 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\libs\nanovg\nanovg.c" />
     <ClCompile Include="test.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="glWindow.hpp" />
+    <ClInclude Include="..\hydrogen\palette.hpp" />
+    <ClInclude Include="argon.hpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <Font Include="times.ttf" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include=".rc" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
@@ -122,9 +130,9 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;GLEW_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;GLEW_STATIC;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\Users\evan\CppProjects\libs\glfw\include\GLFW\;C:\Users\evan\CppProjects\libs\glew\include\GL\;C:\Users\evan\CppProjects\hydrogen\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\evan\CppProjects\libs\glfw\include\GLFW\;C:\Users\evan\CppProjects\libs\glew\include\GL\;C:\Users\evan\CppProjects\hydrogen\;C:\Users\evan\CppProjects\libs\nanovg\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
     </ClCompile>
     <Link>
