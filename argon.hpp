@@ -1,3 +1,6 @@
+#pragma once
+
+#include <glew.h>
 #include <glfw3.h>
 #include <hydrogen.hpp>
 #include <string>
@@ -28,6 +31,7 @@ namespace Ar {
 			glfwSetCursorEnterCallback(handle, [](GLFWwindow* win, int e) { get(win)->cursorEnter(win, e); });
 			glfwSetScrollCallback(handle, [](GLFWwindow* win, double x, double y) { get(win)->scroll(win, x, y); });
 			glfwSetDropCallback(handle, [](GLFWwindow* win, int c, const char** p) { get(win)->drop(win, c, p); });
+			glfwSetFramebufferSizeCallback(handle, [](GLFWwindow* win, int x, int y) { get(win)->framebufferSize(win, x, y); });
 		}
 
 		virtual void windowPos(GLFWwindow* win, int x, int y) = 0;
@@ -56,6 +60,8 @@ namespace Ar {
 
 		virtual void drop(GLFWwindow* win, int c, const char** p) = 0;
 
+		virtual void framebufferSize(GLFWwindow* win, int w, int h) = 0;
+
 		static AllGLFWCallbacks* get(GLFWwindow* window) {
 			return static_cast<AllGLFWCallbacks*>(glfwGetWindowUserPointer(window));
 		}
@@ -63,7 +69,7 @@ namespace Ar {
 
 	class GLComponent : public AllGLFWCallbacks, public Rect2D<hushort> {
 	public:
-		LinkedList<GLComponent*> children;
+		LinkedList<GLComponent*> children = LinkedList<GLComponent*>();
 
 		virtual void render(NVGcontext* vg) {
 			render(vg, *this);
@@ -74,8 +80,7 @@ namespace Ar {
 			renderChildren(vg, rect);
 		}
 
-		virtual void renderThis(NVGcontext* vg, Rect2D<hushort> rect) {
-		}
+		virtual void renderThis(NVGcontext* vg, Rect2D<hushort> rect) {}
 
 		virtual void renderChildren(NVGcontext* vg, Rect2D<hushort> rect) {
 			for (auto& c : children) {
@@ -160,6 +165,12 @@ namespace Ar {
 				c->drop(win, num, paths);
 			}
 		}
+
+		void framebufferSize(GLFWwindow* win, int w, int h) {
+			for (auto& c : children) {
+				c->framebufferSize(win, w, h);
+			}
+		}
 	};
 
 	class GLFrame : public GLComponent {
@@ -173,12 +184,16 @@ namespace Ar {
 				const char* desc;
 				int code = glfwGetError(&desc);
 				cerr << desc << endl;
-				throw code;
+				exit(code);
 			}
 
 			glfwSetWindowUserPointer(handle, this);
 
 			init(handle);
+		}
+
+		~GLFrame() {
+			glfwDestroyWindow(handle);
 		}
 
 		static GLFrame* get(GLFWwindow* window) {
@@ -198,14 +213,14 @@ namespace Ar {
 			nvgFill(vg);
 
 			nvgBeginPath(vg);
-			nvgRect(vg, rect.getX() + 4, rect.getY() + 4, rect.getW() - 8, rect.getH() - 8);
+			nvgRect(vg, (float)rect.getX() + 4, (float)rect.getY() + 4, (float)rect.getW() - 8, (float)rect.getH() - 8);
 
 			nvgFillColor(vg, down ? black3 : black5);
 			nvgFill(vg);
 		}
 
 		void cursorPos(GLFWwindow* win, double x, double y) {
-			hover = contains(x, y);
+			hover = contains((hushort)x, (hushort)y);
 			GLComponent::cursorPos(win, x, y);
 		}
 
@@ -219,8 +234,7 @@ namespace Ar {
 	public:
 		string text, font;
 
-		GLTextButton(string text = "", string font = "Times New Roman") : text(text), font(font) {
-		}
+		GLTextButton(string text = "", string font = "Times New Roman") : text(text), font(font) {}
 
 		void renderThis(NVGcontext* vg, Rect2D<hushort> rect) {
 			GLButton::renderThis(vg, rect);
@@ -229,7 +243,68 @@ namespace Ar {
 			nvgFontFace(vg, font.data());
 			nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
 			nvgFillColor(vg, hover ? gold3 : gold5);
-			nvgText(vg, rect.getX() + rect.getW() / 2, rect.getY() + rect.getH() / 2, text.data(), &text.data()[text.length()]);
+			nvgText(vg, rect.getX() + (float)rect.getW() / 2, rect.getY() + (float)rect.getH() / 2, text.data(), &text.data()[text.length()]);
+		}
+	};
+
+	class Shader {
+	public:
+		GLuint id;
+
+		Shader() {
+			id = glCreateProgram();
+		}
+
+		Shader(GLuint id) : id(id) {}
+
+		void attach(GLuint type, string code) {
+			GLuint id = glCreateShader(type);
+
+			const char* source = code.c_str();
+			GLint length = static_cast<GLint>(code.length());
+			glShaderSource(id, 1, &source, &length);
+			glCompileShader(id);
+
+			GLint param;
+			glGetShaderiv(id, GL_COMPILE_STATUS, &param);
+
+			if (!param) {
+				GLint logLen = 0;
+				glGetShaderiv(id, GL_INFO_LOG_LENGTH, &logLen);
+				string log;
+
+				if (logLen > 0) {
+					log.resize(logLen);
+					glGetShaderInfoLog(id, logLen, &logLen, &log[0]);
+				}
+
+				cerr << "Error compiling shader " << type << ": " << log << endl;
+				exit(-1);
+			}
+
+			glAttachShader(this->id, id);
+			glDeleteShader(id);
+		}
+		
+		void link() {
+			glLinkProgram(id);
+
+			GLint param;
+			glGetProgramiv(id, GL_LINK_STATUS, &param);
+
+			if (!param) {
+				GLint logLen = 0;
+				glGetProgramiv(id, GL_INFO_LOG_LENGTH, &logLen);
+				string log;
+
+				if (logLen > 0) {
+					log.resize(logLen);
+					glGetProgramInfoLog(id, logLen, &logLen, &log[0]);
+				}
+
+				cerr << "Error linking shader: " << log << endl;
+				exit(-1);
+			}
 		}
 	};
 }
