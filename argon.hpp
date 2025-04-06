@@ -2,7 +2,6 @@
 
 #include <glew.h>
 #include <glfw3.h>
-#include <hydrogen.hpp>
 #include <string>
 #include "linkedList.hpp"
 #include "rect2D.hpp"
@@ -67,7 +66,7 @@ namespace Ar {
 		}
 	};
 
-	class GLComponent : public AllGLFWCallbacks, public Rect2D<hushort> {
+	class GLComponent : public AllGLFWCallbacks, public Rect2D<uint16_t> {
 	public:
 		LinkedList<GLComponent*> children = LinkedList<GLComponent*>();
 
@@ -75,14 +74,14 @@ namespace Ar {
 			render(vg, *this);
 		}
 
-		virtual void render(NVGcontext* vg, Rect2D<hushort> rect) {
+		virtual void render(NVGcontext* vg, Rect2D<uint16_t> rect) {
 			renderThis(vg, rect);
 			renderChildren(vg, rect);
 		}
 
-		virtual void renderThis(NVGcontext* vg, Rect2D<hushort> rect) {}
+		virtual void renderThis(NVGcontext* vg, Rect2D<uint16_t> rect) {}
 
-		virtual void renderChildren(NVGcontext* vg, Rect2D<hushort> rect) {
+		virtual void renderChildren(NVGcontext* vg, Rect2D<uint16_t> rect) {
 			for (auto& c : children) {
 				c->render(vg, rect + *c);
 			}
@@ -190,6 +189,8 @@ namespace Ar {
 			glfwSetWindowUserPointer(handle, this);
 
 			init(handle);
+
+			glfwMakeContextCurrent(handle);
 		}
 
 		~GLFrame() {
@@ -205,7 +206,7 @@ namespace Ar {
 	public:
 		bool down = false, hover = false;
 
-		void renderThis(NVGcontext* vg, Rect2D<hushort> rect) {
+		void renderThis(NVGcontext* vg, Rect2D<uint16_t> rect) {
 			nvgBeginPath(vg);
 			nvgRect(vg, rect.getX(), rect.getY(), rect.getW(), rect.getH());
 
@@ -220,7 +221,7 @@ namespace Ar {
 		}
 
 		void cursorPos(GLFWwindow* win, double x, double y) {
-			hover = contains((hushort)x, (hushort)y);
+			hover = contains((uint16_t)x, (uint16_t)y);
 			GLComponent::cursorPos(win, x, y);
 		}
 
@@ -236,7 +237,7 @@ namespace Ar {
 
 		GLTextButton(string text = "", string font = "Times New Roman") : text(text), font(font) {}
 
-		void renderThis(NVGcontext* vg, Rect2D<hushort> rect) {
+		void renderThis(NVGcontext* vg, Rect2D<uint16_t> rect) {
 			GLButton::renderThis(vg, rect);
 
 			nvgFontSize(vg, 24);
